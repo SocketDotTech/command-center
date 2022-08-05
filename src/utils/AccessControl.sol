@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.4;
+
 import "./Ownable.sol";
 
 abstract contract AccessControl is Ownable {
@@ -15,7 +16,9 @@ abstract contract AccessControl is Ownable {
     constructor(address owner_) Ownable(owner_) {}
 
     modifier onlyRole(bytes32 role) {
-        if (!_permits[role][msg.sender]) revert NoPermit(role);
+        if (!_permits[role][msg.sender]) {
+            revert NoPermit(role);
+        }
         _;
     }
 

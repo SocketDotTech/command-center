@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity 0.8.4;
+
 abstract contract Ownable {
     address private _owner;
     address private _nominee;
@@ -15,7 +16,9 @@ abstract contract Ownable {
     }
 
     modifier onlyOwner() {
-        if (msg.sender != _owner) revert OnlyOwner();
+        if (msg.sender != _owner) {
+            revert OnlyOwner();
+        }
         _;
     }
 
@@ -28,13 +31,17 @@ abstract contract Ownable {
     }
 
     function nominateOwner(address nominee_) external {
-        if (msg.sender != _owner) revert OnlyOwner();
+        if (msg.sender != _owner) {
+            revert OnlyOwner();
+        }
         _nominee = nominee_;
         emit OwnerNominated(_nominee);
     }
 
     function claimOwner() external {
-        if (msg.sender != _nominee) revert OnlyNominee();
+        if (msg.sender != _nominee) {
+            revert OnlyNominee();
+        }
         _claimOwner(msg.sender);
     }
 
