@@ -1,65 +1,74 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.4;
 
 import "./interfaces/ISocket.sol";
 import "./utils/AccessControl.sol";
+import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 contract CommandCenter is AccessControl(msg.sender) {
 	bytes32 public PAUSER = keccak256("PAUSER");
 
-	// setup multiple pauser roles 
-	// setup only one owner role
-
 	event FailedToPause(uint routeId);
 
-	// TODO add fallback/receive
-    receive() external payable {}
-
-    fallback() external payable {}
+	// maxing to 1k, we can deploy a new command center once/if we reach there
+	uint256 public constant MAX_ROUTES=1000; 
 
 	ISocket immutable public socket;
-	
-	// maxing to 10k, we can deploy a new command center once/if we reach there
-	uint256 public constant MAX_ROUTES=10000; 
+	uint256 immutable public chainId;
 
-	constructor(address _socketRegistry, address owner) {
-		socket= ISocket(_socket);
-		nominateOwner(owner);
-		grantRole(PAUSER, owner);
+	mapping (address => uint256) public noncePerPauser;
+	
+	constructor(address _socketRegistry) {
+		socket= ISocket(_socketRegistry);
+		chainId = block.chainid;
 	}
 
-	// make it only pauser
+ 
+	//////////////////// GUARDED BY PAUSERS ////////////////////
 	function pause() external onlyRole(PAUSER) {
 		_pause();
 	}
 
-	// accept signature
-	// make sure the message on which the signature is accepted has a nonce so people cannot pause again and again
-	function pauseWithSig(bytes calldata signature) external {
-		// TODO disburse reward
-		// check signature and make sure it matches a pauser
+	function pauseWithSig(address pauser,bytes calldata signature) external {
+		// get the signer and make sure its replay safe, both by chain and by nonce
+		address signer = ECDSA.recover(ECDSA.toEthSignedMessageHash(getDigest(pauser)), signature);
+		// make sure the signer is a pauser
+		if(!_hasRole(PAUSER, signer)) revert NoPermit(PAUSER); 
 
-		// call pause
+		// pause Socket registry
+		_pause();
 
-		// send ETH
-		// just send whatever balance(this) has
+		// reward caller, dont care about the return value
+		(msg.sender).call{value: address(this).balance}("");
 	}	
+	
 
-	// make it onlyOwner
+	//////////////////// GUARDED BY OWNER ////////////////////
 	function makeAuthorisedCall(bytes calldata data) external onlyOwner {
 		address(socket).call(data);
 	}
 
+
 	function _pause() internal {
 		for(uint i = 0; i < MAX_ROUTES; i++) {
-			ISocket.RouteData calldata route = ISocket.routes(i);
-			if(route.address==address(0)) break;
+			ISocket.RouteData memory route = socket.routes(i);
+			if(route.route==address(0)) break;
 
-			try	ISocket.disableRoute(i) {
+			try	socket.disableRoute(i) {
 				// do nothing
 			}catch {
-				emit FailedToPause(i)
+				emit FailedToPause(i);
 			}
 		}
 	}
+
+	function getMessageToSign(address pauser) public view returns(bytes memory) {
+		return abi.encodePacked(chainId, noncePerPauser[pauser]+1);
+	}
+
+	function getDigest(address pauser) public view returns(bytes32) {
+		return keccak256(getMessageToSign(pauser));
+	}
+
+    receive() external payable {}
+    fallback() external payable {}
 }
