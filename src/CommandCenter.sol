@@ -30,7 +30,8 @@ contract CommandCenter is AccessControl(msg.sender) {
     function pauseWithSig(address pauser, bytes calldata signature) external {
         // get the signer and make sure its replay safe, both by chain and by nonce
         address signer = ECDSA.recover(
-            ECDSA.toEthSignedMessageHash(getDigest(pauser)), signature
+            ECDSA.toEthSignedMessageHash(getDigest(pauser)),
+            signature
         );
         // make sure the signer is a pauser
         if (!_hasRole(PAUSER, signer)) {
@@ -77,5 +78,6 @@ contract CommandCenter is AccessControl(msg.sender) {
     }
 
     receive() external payable {}
+
     fallback() external payable {}
 }

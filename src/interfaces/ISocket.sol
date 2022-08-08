@@ -10,4 +10,6 @@ interface ISocket {
     }
 
     function routes(uint256 _routeId) external returns (RouteData calldata);
+
+    function transferOwnership(address newOwner) external;
 }
