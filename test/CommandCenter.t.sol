@@ -16,86 +16,56 @@ import {ISocket} from "../src/interfaces/ISocket.sol";
 contract ContractTest is Test {
     // Utils internal utils;
     CommandCenter public cc;
-    ISocket public registryContract;
+    ISocket public rc;
+
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER");
 
     address internal PAUSER_1 = 0x75bbC04fA183dd0ac75857a0400F93f766748f01;
+    address internal DUMMY_PAUSER_1 = 0xbdca5aa542b488fF476776e11799fDaE41584392;
     address internal PAUSER_2 = 0xa5acBA07788f16B4790FCBb09cA3b7Fc8dd053A2;
 
     address internal owner = 0x5fD7D0d6b91CC4787Bcb86ca47e0Bd4ea0346d34;
-    address internal socketRegistry =
-        0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0;
+
+    address internal socketRegistry = 0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0;
     address internal nominee;
 
     function setUp() public {
         cc = new CommandCenter(socketRegistry);
-        registryContract = ISocket(socketRegistry);
+        rc = ISocket(socketRegistry);
 
         vm.prank(owner);
-        registryContract.transferOwnership(address(cc));
+        rc.transferOwnership(address(cc));
     }
 
     function testGrantPauserRole() public {
-        cc.grantRole(keccak256("PAUSER"), PAUSER_1);
-        cc.grantRole(keccak256("PAUSER"), PAUSER_2);
-        bool roleCheck = cc.hasRole(
-            keccak256("PAUSER"),
-            PAUSER_1 
-        );
-        assertTrue(roleCheck);
-        roleCheck = cc.hasRole(
-            keccak256("PAUSER"),
-            PAUSER_2
-        );
-        assertTrue(roleCheck);
-
-        vm.prank(PAUSER_1);
-        cc.pause();
+        cc.grantRole(PAUSER_ROLE, PAUSER_1);
+        cc.grantRole(PAUSER_ROLE, PAUSER_2);
+        assertTrue(cc.hasRole(PAUSER_ROLE, PAUSER_1));
+        assertTrue(cc.hasRole(PAUSER_ROLE, PAUSER_2));
+        assertFalse(cc.hasRole(PAUSER_ROLE, DUMMY_PAUSER_1));
     }
 
     function testRevokeRole() public {
-        cc.revokeRole(keccak256("PAUSER"), PAUSER_1);
-        bool roleCheck = cc.hasRole(
-            keccak256("PAUSER"),
-           PAUSER_1 
-        );
+        cc.revokeRole(PAUSER_ROLE, PAUSER_1);
+        bool roleCheck = cc.hasRole(PAUSER_ROLE, PAUSER_1);
         assertFalse(roleCheck);
     }
 
-    function testGrantOwnerPauser() public {
-        cc.grantRole(keccak256("PAUSER"), owner);
-
-        bool roleCheck = cc.hasRole(
-            keccak256("PAUSER"),
-            owner
-        );
-
-        assertTrue(roleCheck);
+	// in this one we try to transfer the ownership from the current owner
+    // of command center to new owner
+    function testOwnershipTransfer() public {
+        assertTrue(cc.owner() == address(this));
+        cc.nominateOwner(PAUSER_1);
+        assertTrue(cc.nominee() == PAUSER_1);
+        vm.prank(PAUSER_1);
+        cc.claimOwner();
+        assertTrue(cc.owner() == PAUSER_1);
     }
 
-    // function testRouteStatus() public {
-    //     bool route0IsEnabled = registryContract.routes(0).isEnabled;
-    //     bool route1IsNotMiddleware = registryContract.routes(1).isMiddleware;
-
-    //     assertTrue(route0IsEnabled);
-    //     assertFalse(route1IsNotMiddleware);
-    // }
-
-    // function testMakeAuthorisedCall() public {
-    //     commandCenterContract.makeAuthorisedCall(
-    //         "0x02a9c0510000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000014ac5b3580dd1e546cd7287cd1fadba9a873662800000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000"
-    //     );
-
-    //     bool route21IsEnabled = registryContract.routes(21).isEnabled;
-    //     assertTrue(route21IsEnabled);
-    // }
-
-    // function testPause() public {
-    //     vm.prank(pauser1);
-    //     commandCenterContract.pause();
-
-    //     for (uint256 i = 0; i < 22; i++) {
-    //         bool routeStatus = registryContract.routes(i).isEnabled;
-    //         assertFalse(routeStatus);
-    //     }
-    // }
+    function testAuthorisedCall() public {
+        // calls addRoutes on registry
+        cc.makeAuthorisedCall("0x02a9c05100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000b6fb3062405985f700fa23758a3053162ddbefb900000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000");
+        // ISocket.RouteData memory routeData = rc.routes(21);
+        // console.logAddress(routeData.route);
+    }
 }

@@ -4,19 +4,17 @@ import "./interfaces/ISocket.sol";
 import "./utils/AccessControl.sol";
 
 contract CommandCenter is AccessControl(msg.sender) {
-    bytes32 public PAUSER = keccak256("PAUSER");
+    bytes32 public constant PAUSER = keccak256("PAUSER");
 
-    event FailedToPause(uint256 routeId);
+    event FailedToPause(uint256 idx);
 
     // maxing to 1k, we can deploy a new command center once/if we reach there
     uint256 public constant MAX_ROUTES = 1000;
 
     ISocket public immutable socket;
-    uint256 public immutable chainId;
 
     constructor(address _socketRegistry) {
         socket = ISocket(_socketRegistry);
-        chainId = block.chainid;
     }
 
     //////////////////// GUARDED BY PAUSERS ////////////////////
@@ -24,7 +22,7 @@ contract CommandCenter is AccessControl(msg.sender) {
         _pause(0);
     }
 
-    function pauseStartingFrom(uint startIndex) external onlyRole(PAUSER) {
+    function pauseStartingFrom(uint256 startIndex) external onlyRole(PAUSER) {
         _pause(startIndex);
     }
 
@@ -33,11 +31,10 @@ contract CommandCenter is AccessControl(msg.sender) {
         address(socket).call(data);
     }
 
-
     //////////////////// INTERNALS ////////////////////
-    function _pause(uint startIdx) internal {
+    function _pause(uint256 startIdx) internal {
         for (uint256 i = startIdx; i < MAX_ROUTES; i++) {
-           try socket.disableRoute(i) {
+            try socket.disableRoute(i) {
                 // do nothing
             } catch {
                 emit FailedToPause(i);
@@ -45,8 +42,6 @@ contract CommandCenter is AccessControl(msg.sender) {
             }
         }
     }
-
-    receive() external payable {}
 
     fallback() external payable {}
 }
