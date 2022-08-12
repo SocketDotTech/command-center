@@ -42,6 +42,4 @@ contract CommandCenter is AccessControl(msg.sender) {
             }
         }
     }
-
-    fallback() external payable {}
 }
