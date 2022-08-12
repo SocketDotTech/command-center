@@ -15,49 +15,56 @@ import {ISocket} from "../src/interfaces/ISocket.sol";
 
 contract ContractTest is Test {
     // Utils internal utils;
-    CommandCenter public commandCenterContract;
+    CommandCenter public cc;
     ISocket public registryContract;
 
-    address internal pauser1 = 0xa5acBA07788f16B4790FCBb09cA3b7Fc8dd053A2;
-    address internal owner = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+    address internal PAUSER_1 = 0x75bbC04fA183dd0ac75857a0400F93f766748f01;
+    address internal PAUSER_2 = 0xa5acBA07788f16B4790FCBb09cA3b7Fc8dd053A2;
+
+    address internal owner = 0x5fD7D0d6b91CC4787Bcb86ca47e0Bd4ea0346d34;
     address internal socketRegistry =
         0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0;
     address internal nominee;
 
     function setUp() public {
-        commandCenterContract = new CommandCenter(socketRegistry);
+        cc = new CommandCenter(socketRegistry);
         registryContract = ISocket(socketRegistry);
-        vm.prank(0x5fD7D0d6b91CC4787Bcb86ca47e0Bd4ea0346d34);
-        registryContract.transferOwnership(address(commandCenterContract));
+
         vm.prank(owner);
+        registryContract.transferOwnership(address(cc));
     }
 
     function testGrantPauserRole() public {
-        commandCenterContract.grantRole(keccak256("PAUSER"), pauser1);
-
-        bool roleCheck = commandCenterContract.hasRole(
+        cc.grantRole(keccak256("PAUSER"), PAUSER_1);
+        cc.grantRole(keccak256("PAUSER"), PAUSER_2);
+        bool roleCheck = cc.hasRole(
             keccak256("PAUSER"),
-            pauser1
+            PAUSER_1 
         );
-
         assertTrue(roleCheck);
+        roleCheck = cc.hasRole(
+            keccak256("PAUSER"),
+            PAUSER_2
+        );
+        assertTrue(roleCheck);
+
+        vm.prank(PAUSER_1);
+        cc.pause();
     }
 
-    // function testRevokeRole() public {
-    //     commandCenterContract.revokeRole(keccak256("PAUSER"), pauser1);
-
-    //     bool roleCheck = commandCenterContract.hasRole(
-    //         keccak256("PAUSER"),
-    //         pauser1
-    //     );
-
-    //     assertFalse(roleCheck);
-    // }
+    function testRevokeRole() public {
+        cc.revokeRole(keccak256("PAUSER"), PAUSER_1);
+        bool roleCheck = cc.hasRole(
+            keccak256("PAUSER"),
+           PAUSER_1 
+        );
+        assertFalse(roleCheck);
+    }
 
     function testGrantOwnerPauser() public {
-        commandCenterContract.grantRole(keccak256("PAUSER"), owner);
+        cc.grantRole(keccak256("PAUSER"), owner);
 
-        bool roleCheck = commandCenterContract.hasRole(
+        bool roleCheck = cc.hasRole(
             keccak256("PAUSER"),
             owner
         );
@@ -65,22 +72,22 @@ contract ContractTest is Test {
         assertTrue(roleCheck);
     }
 
-    function testRouteStatus() public {
-        bool route0IsEnabled = registryContract.routes(0).isEnabled;
-        bool route1IsNotMiddleware = registryContract.routes(1).isMiddleware;
+    // function testRouteStatus() public {
+    //     bool route0IsEnabled = registryContract.routes(0).isEnabled;
+    //     bool route1IsNotMiddleware = registryContract.routes(1).isMiddleware;
 
-        assertTrue(route0IsEnabled);
-        assertFalse(route1IsNotMiddleware);
-    }
+    //     assertTrue(route0IsEnabled);
+    //     assertFalse(route1IsNotMiddleware);
+    // }
 
-    function testMakeAuthorisedCall() public {
-        commandCenterContract.makeAuthorisedCall(
-            "0x02a9c0510000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000014ac5b3580dd1e546cd7287cd1fadba9a873662800000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000"
-        );
+    // function testMakeAuthorisedCall() public {
+    //     commandCenterContract.makeAuthorisedCall(
+    //         "0x02a9c0510000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000014ac5b3580dd1e546cd7287cd1fadba9a873662800000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000"
+    //     );
 
-        bool route21IsEnabled = registryContract.routes(21).isEnabled;
-        assertTrue(route21IsEnabled);
-    }
+    //     bool route21IsEnabled = registryContract.routes(21).isEnabled;
+    //     assertTrue(route21IsEnabled);
+    // }
 
     // function testPause() public {
     //     vm.prank(pauser1);

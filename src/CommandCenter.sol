@@ -2,7 +2,6 @@ pragma solidity ^0.8.4;
 
 import "./interfaces/ISocket.sol";
 import "./utils/AccessControl.sol";
-import "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 contract CommandCenter is AccessControl(msg.sender) {
     bytes32 public PAUSER = keccak256("PAUSER");
@@ -15,8 +14,6 @@ contract CommandCenter is AccessControl(msg.sender) {
     ISocket public immutable socket;
     uint256 public immutable chainId;
 
-    mapping(address => uint256) public noncePerPauser;
-
     constructor(address _socketRegistry) {
         socket = ISocket(_socketRegistry);
         chainId = block.chainid;
@@ -24,25 +21,11 @@ contract CommandCenter is AccessControl(msg.sender) {
 
     //////////////////// GUARDED BY PAUSERS ////////////////////
     function pause() external onlyRole(PAUSER) {
-        _pause();
+        _pause(0);
     }
 
-    function pauseWithSig(address pauser, bytes calldata signature) external {
-        // get the signer and make sure its replay safe, both by chain and by nonce
-        address signer = ECDSA.recover(
-            ECDSA.toEthSignedMessageHash(getDigest(pauser)),
-            signature
-        );
-        // make sure the signer is a pauser
-        if (!_hasRole(PAUSER, signer)) {
-            revert NoPermit(PAUSER);
-        }
-
-        // pause Socket registry
-        _pause();
-
-        // reward caller, dont care about the return value
-        (msg.sender).call{value: address(this).balance}("");
+    function pauseStartingFrom(uint startIndex) external onlyRole(PAUSER) {
+        _pause(startIndex);
     }
 
     //////////////////// GUARDED BY OWNER ////////////////////
@@ -50,31 +33,17 @@ contract CommandCenter is AccessControl(msg.sender) {
         address(socket).call(data);
     }
 
-    function _pause() internal {
-        for (uint256 i = 0; i < MAX_ROUTES; i++) {
-            ISocket.RouteData memory route = socket.routes(i);
-            if (route.route == address(0)) {
-                break;
-            }
 
-            try socket.disableRoute(i) {
+    //////////////////// INTERNALS ////////////////////
+    function _pause(uint startIdx) internal {
+        for (uint256 i = startIdx; i < MAX_ROUTES; i++) {
+           try socket.disableRoute(i) {
                 // do nothing
             } catch {
                 emit FailedToPause(i);
+                break;
             }
         }
-    }
-
-    function getMessageToSign(address pauser)
-        public
-        view
-        returns (bytes memory)
-    {
-        return abi.encodePacked(chainId, noncePerPauser[pauser] + 1);
-    }
-
-    function getDigest(address pauser) public view returns (bytes32) {
-        return keccak256(getMessageToSign(pauser));
     }
 
     receive() external payable {}
