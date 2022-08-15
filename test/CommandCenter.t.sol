@@ -26,15 +26,21 @@ contract ContractTest is Test {
 
     address internal owner = 0x5fD7D0d6b91CC4787Bcb86ca47e0Bd4ea0346d34;
 
-    address internal socketRegistry = 0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0;
-    address internal nominee;
+    address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     function setUp() public {
-        cc = new CommandCenter(socketRegistry);
-        rc = ISocket(socketRegistry);
+        cc = new CommandCenter(0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0);
+        rc = ISocket(0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0);
 
         vm.prank(owner);
         rc.transferOwnership(address(cc));
+    }
+
+    function testOwnersAreSetCorrectly() public {
+        console.logAddress(rc.owner());
+        console.logAddress(address(cc));
+        console.logAddress(cc.owner());
+        console.log(address(this));
     }
 
     function testGrantPauserRole() public {
@@ -51,7 +57,7 @@ contract ContractTest is Test {
         assertFalse(roleCheck);
     }
 
-	// in this one we try to transfer the ownership from the current owner
+    // in this one we try to transfer the ownership from the current owner
     // of command center to new owner
     function testOwnershipTransfer() public {
         assertTrue(cc.owner() == address(this));
@@ -62,10 +68,7 @@ contract ContractTest is Test {
         assertTrue(cc.owner() == PAUSER_1);
     }
 
-    function testAuthorisedCall() public {
-        // calls addRoutes on registry
-        cc.makeAuthorisedCall("0x02a9c05100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000b6fb3062405985f700fa23758a3053162ddbefb900000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000");
-        // ISocket.RouteData memory routeData = rc.routes(21);
-        // console.logAddress(routeData.route);
+    function testRescueFunds() public {
+        cc.makeAuthorisedCall(abi.encodeWithSignature("rescueFunds(address,address,uint256)",USDC, address(this), 6000000));
     }
 }

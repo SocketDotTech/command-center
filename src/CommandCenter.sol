@@ -2,11 +2,13 @@ pragma solidity ^0.8.4;
 
 import "./interfaces/ISocket.sol";
 import "./utils/AccessControl.sol";
+import "forge-std/console.sol";
 
 contract CommandCenter is AccessControl(msg.sender) {
     bytes32 public constant PAUSER = keccak256("PAUSER");
 
     event FailedToPause(uint256 idx);
+    event AuthorisedCallSuccessful();
 
     // maxing to 1k, we can deploy a new command center once/if we reach there
     uint256 public constant MAX_ROUTES = 1000;
@@ -28,7 +30,10 @@ contract CommandCenter is AccessControl(msg.sender) {
 
     //////////////////// GUARDED BY OWNER ////////////////////
     function makeAuthorisedCall(bytes calldata data) external onlyOwner {
-        address(socket).call(data);
+        (bool success, ) = address(socket).call(data);
+        require(success, "execution failed");
+
+        emit AuthorisedCallSuccessful(); 
     }
 
     //////////////////// INTERNALS ////////////////////
