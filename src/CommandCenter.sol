@@ -2,7 +2,6 @@ pragma solidity ^0.8.4;
 
 import "./interfaces/ISocket.sol";
 import "./utils/AccessControl.sol";
-import "forge-std/console.sol";
 
 contract CommandCenter is AccessControl(msg.sender) {
     bytes32 public constant PAUSER = keccak256("PAUSER");
