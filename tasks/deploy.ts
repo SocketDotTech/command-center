@@ -1,10 +1,16 @@
-import { Signer } from "@ethersproject/abstract-signer";
 import { task } from "hardhat/config";
+import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-task("deploy", "Prints the list of accounts", async (params, hre) => {
-  const accounts: Signer[] = await hre.ethers.getSigners();
-
-  for (const account of accounts) {
-    console.log(await account.getAddress());
-  }
-});
+task("deploy")
+  .addParam("socketRegistry", "Address of socket registry")
+  .setAction(async ({ socketRegistry }, hre) => {
+    const signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    const commandCenterFactory = await hre.ethers.getContractFactory(
+      "CommandCenter"
+    );
+    const commandCenter = await commandCenterFactory
+      .connect(signers[0])
+      .deploy(socketRegistry);
+    await commandCenter.deployed();
+    console.log("Command Center deployed to: ", commandCenter.address);
+  });
