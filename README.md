@@ -19,3 +19,7 @@ There is only one `owner` to the system:
 Deployment is made using hardhat
 
 `npx hardhat deploy --socket-registry 0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0`
+
+# Deploy multichain
+
+PRIVATE_KEY='xxx' SOCKET_REGISTRY="0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0" yarn deploy:prod
