@@ -6,8 +6,20 @@ It allows us to seperate out the roles for Owner and Pauser, such that Pauser co
 Pauser will only have the ability to pause the system while the owner will have the ability to add new routes.
 
 Pausers can be assigned the `PAUSER` role and once they have that they can either call
+
 - `pause` can only be called by the EOA which has be assigned the PAUSER role
 
 There is only one `owner` to the system:
+
 - can make authorised calls to socket via `makeAuthorisedCall` to add new routes etc
 - can assign and revoke the `PAUSER` roles
+
+# Deploy
+
+Deployment is made using hardhat
+
+`npx hardhat deploy --socket-registry 0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0`
+
+# Deploy multichain
+
+PRIVATE_KEY='xxx' SOCKET_REGISTRY="0xc30141B657f4216252dc59Af2e7CdB9D8792e1B0" yarn deploy:prod
